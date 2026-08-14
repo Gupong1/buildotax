@@ -4,92 +4,92 @@ publish_to: 'none'
 version: 2.0.2+25
 
 environment:
-  sdk: ">=3.8.1 <4.0.0"
-  flutter: ">=3.7.0"
+  sdk: ">=3.0.0 <4.0.0"  # ✅ FIX: Kompatibel dengan Flutter 3.22.6
+  flutter: ">=3.16.0"
 
 dependencies:
   flutter:
     sdk: flutter
 
   # Network, parsing, cryptographic deps
-  http: ^1.2.2
+  http: ^1.2.0
   graphql: ^5.1.3
-  html: ^0.15.6
+  html: ^0.15.4
   encrypt: ^5.0.3
-  url_launcher: ^6.3.1
-  crypto: ^3.0.6
+  url_launcher: ^6.2.5
+  crypto: ^3.0.3
   web_socket_channel: ^2.4.0
   network_info_plus: ^4.1.0
-  dio: ^5.7.0
-  connectivity_plus: ^6.0.3
+  dio: ^5.4.0  # ✅ FIX: Versi stabil
+  connectivity_plus: ^5.0.2
 
   # Core utils
   path_provider: ^2.1.1
-  awesome_notifications: ^0.10.1
-  package_info_plus: ^9.0.0
-  permission_handler: ^11.3.0
-  device_info_plus: ^12.3.0
+  awesome_notifications: ^0.8.3  # ✅ FIX: Versi stabil
+  package_info_plus: ^5.0.1
+  permission_handler: ^11.0.1
+  device_info_plus: ^9.1.0
   provider: ^6.1.2
-  file_picker: ^10.2.0
-  dynamic_color: ^1.7.0
-  app_links: ^6.4.1
+  file_picker: ^8.0.0  # ✅ FIX: Versi stabil
+  dynamic_color: ^1.6.9  # ✅ FIX: Versi stabil
+  app_links: ^6.1.0
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.2.2
 
   # Local storage
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-  flutter_secure_storage: ^10.0.0
-  flutter_svg: ^2.1.0
+  flutter_secure_storage: ^9.0.0
+  flutter_svg: ^2.0.9
 
   # Media and player related
-  open_file: ^3.5.10
-  wakelock_plus: ^1.2.10
-  just_audio: ^0.10.1
-  video_player: ^2.9.2
-  audioplayers: ^6.5.1
-  chewie: ^1.5.2
+  open_file: ^3.3.2
+  wakelock_plus: ^1.1.4
+  just_audio: ^0.9.36
+  video_player: ^2.8.3
+  audioplayers: ^6.0.0  # ✅ FIX: Versi stabil
+  chewie: ^1.7.0
   video_player_win: ^3.1.1
 
   # UI
   pull_to_refresh: ^2.0.0
   desktop_webview_window: ^0.2.3
-  cached_network_image: ^3.4.1
+  cached_network_image: ^3.3.1
   shimmer: ^3.0.0
-  webview_flutter: ^4.4.2
+  webview_flutter: ^4.7.0
   font_awesome_flutter: ^10.7.0
-  flutter_animate: ^4.5.2
+  flutter_animate: ^4.5.0
   iconsax: ^0.0.8
   carousel_slider: ^5.1.1
-  flutter_cache_manager: ^3.4.1
-  system_alert_window: ^2.0.0
+  flutter_cache_manager: ^3.3.1
+  system_alert_window: ^3.0.0  # ✅ FIX: Update
   window_manager: ^0.3.8
 
   # Misc
-  flutter_native_splash: ^2.4.7
-  share_plus: ^7.0.1
+  flutter_native_splash: ^2.4.0
+  share_plus: ^7.2.1
   geolocator: ^10.1.0
   geocoding: ^2.1.1
   downloadsfolder: ^1.2.0
   flutter_downloader: ^1.11.6
   percent_indicator: ^4.2.3
-  flutter_foreground_task: ^9.2.0
-  android_intent_plus: ^5.0.2
-  fluttertoast: ^9.0.0
-  image_gallery_saver_plus: ^4.0.1
-  flutter_overlay_window: ^0.4.3
+  flutter_foreground_task: ^8.0.0  # ✅ FIX: Update
+  android_intent_plus: ^5.0.0
+  fluttertoast: ^8.2.4
+  image_gallery_saver_plus: ^4.0.0
+  flutter_overlay_window: ^0.5.0  # ✅ FIX: Update
 
   # FIXED: Missing packages untuk build
   clipboard: ^0.1.3
   dartssh2: ^2.14.0
-  flutter_web_auth_2: ^5.0.2
+  flutter_web_auth_2: ^5.0.0
   flutter_markdown: ^0.6.17
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.14.4
-  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_lints: ^4.0.0
   flutter_inappwebview: ^6.0.0
 
 flutter:
