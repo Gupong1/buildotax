@@ -23,58 +23,54 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.3'
+          flutter-version: '3.22.6'  # Menggunakan versi yang lebih stabil
           channel: 'stable'
 
-      - name: Enable Flutter desktop (optional)
-        run: flutter config --no-enable-web
-
-      - name: Cache Flutter dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            build/
-            .dart_tool/
-          key: ${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-flutter-
-
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Install Flutter dependencies
-        run: flutter pub get
-
-      # --- FIX untuk dynamic_color ---
-      - name: Fix Kotlin version for dynamic_color plugin
+      # --- PATCH pubspec.yaml ---
+      - name: Fix pubspec.yaml for compatibility
         run: |
-          # Set Kotlin version di gradle.properties (jika belum ada)
-          if ! grep -q "kotlin.version" android/gradle.properties 2>/dev/null; then
+          # Fix SDK constraint
+          sed -i 's/sdk: ">=3.8.1 <4.0.0"/sdk: ">=3.0.0 <4.0.0"/' pubspec.yaml
+          
+          # Turunkan versi package yang bermasalah
+          sed -i 's/dynamic_color: ^1.7.0/dynamic_color: ^1.6.9/' pubspec.yaml
+          sed -i 's/awesome_notifications: ^0.10.1/awesome_notifications: ^0.8.3/' pubspec.yaml
+          sed -i 's/audioplayers: ^6.5.1/audioplayers: ^6.0.0/' pubspec.yaml
+          sed -i 's/dio: ^5.7.0/dio: ^5.4.0/' pubspec.yaml
+          sed -i 's/file_picker: ^10.2.0/file_picker: ^8.0.0/' pubspec.yaml
+          sed -i 's/system_alert_window: ^2.0.0/system_alert_window: ^3.0.0/' pubspec.yaml
+          sed -i 's/flutter_foreground_task: ^9.2.0/flutter_foreground_task: ^8.0.0/' pubspec.yaml
+          sed -i 's/flutter_overlay_window: ^0.4.3/flutter_overlay_window: ^0.5.0/' pubspec.yaml
+
+      # --- PATCH build.gradle.kts ---
+      - name: Fix Gradle configuration
+        run: |
+          # Tambahkan buildscript ke android/build.gradle.kts
+          if ! grep -q "buildscript" android/build.gradle.kts; then
+            cat << 'EOF' > android/build.gradle.kts.new
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath("com.android.tools.build:gradle:8.1.0")
+                  classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0")
+                  classpath("com.google.gms:google-services:4.3.15")
+              }
+          }
+          EOF
+            cat android/build.gradle.kts >> android/build.gradle.kts.new
+            mv android/build.gradle.kts.new android/build.gradle.kts
+          fi
+
+          # Tambahkan kotlin.version ke gradle.properties
+          if ! grep -q "kotlin.version" android/gradle.properties; then
             echo "kotlin.version=1.9.0" >> android/gradle.properties
           fi
 
-          # Pastikan build.gradle memiliki ext.kotlin_version dan classpath yang benar
-          # Jika file belum memiliki ext.kotlin_version, tambahkan di awal
-          if ! grep -q "ext.kotlin_version" android/build.gradle; then
-            sed -i '1i ext.kotlin_version = "1.9.0"' android/build.gradle
-          else
-            sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.0"/' android/build.gradle
-          fi
-
-          # Pastikan classpath kotlin-gradle-plugin menggunakan variabel ext.kotlin_version
-          if grep -q "classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin" android/build.gradle; then
-            sed -i 's/classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:.*"/classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"/' android/build.gradle
-          else
-            # Jika tidak ada, tambahkan di bawah dependencies
-            sed -i '/dependencies {/a \        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"' android/build.gradle
-          fi
-        continue-on-error: false
+      - name: Install dependencies
+        run: flutter pub get
 
       - name: Build APK
         run: flutter build apk --release
