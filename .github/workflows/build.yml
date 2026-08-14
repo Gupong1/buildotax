@@ -29,13 +29,18 @@ jobs:
       # ✅ PATCH: Fix SDK constraint di pubspec.yaml
       - name: Fix pubspec.yaml
         run: |
-          sed -i 's/sdk: ">=3.8.1 <4.0.0"/sdk: ">=3.0.0 <4.0.0"/' pubspec.yaml
-          echo "✅ Pubspec.yaml fixed"
+          if [ -f "pubspec.yaml" ]; then
+            sed -i 's/sdk: ">=3.8.1 <4.0.0"/sdk: ">=3.0.0 <4.0.0"/' pubspec.yaml
+            echo "✅ Pubspec.yaml fixed"
+          else
+            echo "⚠️ pubspec.yaml not found"
+          fi
 
       # ✅ PATCH: Fix build.gradle.kts
       - name: Fix build.gradle.kts
         run: |
-          cat > android/build.gradle.kts << 'EOF'
+          if [ -f "android/build.gradle.kts" ]; then
+            cat > android/build.gradle.kts << 'EOF'
           buildscript {
               repositories {
                   google()
@@ -66,28 +71,64 @@ jobs:
               delete(rootProject.layout.buildDirectory)
           }
           EOF
-          echo "✅ build.gradle.kts fixed"
+            echo "✅ build.gradle.kts fixed"
+          else
+            echo "⚠️ android/build.gradle.kts not found"
+          fi
 
       # ✅ PATCH: Fix gradle.properties
       - name: Fix gradle.properties
         run: |
-          echo "kotlin.version=1.9.0" >> android/gradle.properties
-          echo "org.gradle.jvmargs=-Xmx4g" >> android/gradle.properties
-          echo "✅ gradle.properties fixed"
+          if [ -f "android/gradle.properties" ]; then
+            echo "kotlin.version=1.9.0" >> android/gradle.properties
+            echo "org.gradle.jvmargs=-Xmx4g" >> android/gradle.properties
+            echo "✅ gradle.properties fixed"
+          else
+            echo "⚠️ android/gradle.properties not found, creating new file"
+            cat > android/gradle.properties << 'EOF'
+          kotlin.version=1.9.0
+          org.gradle.jvmargs=-Xmx4g
+          org.gradle.parallel=true
+          android.useAndroidX=true
+          android.enableJetifier=true
+          EOF
+            echo "✅ gradle.properties created"
+          fi
 
-      # ✅ PATCH: Fix gradle-wrapper.properties
+      # ✅ PATCH: Fix gradle-wrapper.properties (dengan pengecekan lokasi)
       - name: Fix gradle-wrapper.properties
         run: |
-          sed -i 's/gradle-8.12-all.zip/gradle-8.3-all.zip/' android/gradle-wrapper.properties
-          echo "✅ gradle-wrapper.properties fixed"
+          # Cek di berbagai lokasi yang mungkin
+          if [ -f "android/gradle/wrapper/gradle-wrapper.properties" ]; then
+            sed -i 's/gradle-8.12-all.zip/gradle-8.3-all.zip/' android/gradle/wrapper/gradle-wrapper.properties
+            echo "✅ gradle-wrapper.properties fixed at android/gradle/wrapper/"
+          elif [ -f "android/gradle-wrapper.properties" ]; then
+            sed -i 's/gradle-8.12-all.zip/gradle-8.3-all.zip/' android/gradle-wrapper.properties
+            echo "✅ gradle-wrapper.properties fixed at android/"
+          else
+            echo "⚠️ gradle-wrapper.properties not found, creating default"
+            mkdir -p android/gradle/wrapper
+            cat > android/gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.3-all.zip
+          EOF
+            echo "✅ gradle-wrapper.properties created"
+          fi
 
       # ✅ PATCH: Fix app/build.gradle
       - name: Fix app/build.gradle
         run: |
-          sed -i 's/id("kotlin-android")/id("kotlin-android") version "1.9.0"/' android/app/build.gradle
-          sed -i 's/compileSdk = 36/compileSdk = 34/' android/app/build.gradle
-          sed -i 's/targetSdk = 36/targetSdk = 34/' android/app/build.gradle
-          echo "✅ app/build.gradle fixed"
+          if [ -f "android/app/build.gradle" ]; then
+            sed -i 's/id("kotlin-android")/id("kotlin-android") version "1.9.0"/' android/app/build.gradle
+            sed -i 's/compileSdk = 36/compileSdk = 34/' android/app/build.gradle
+            sed -i 's/targetSdk = 36/targetSdk = 34/' android/app/build.gradle
+            echo "✅ app/build.gradle fixed"
+          else
+            echo "⚠️ android/app/build.gradle not found"
+          fi
 
       - name: Install dependencies
         run: flutter pub get
