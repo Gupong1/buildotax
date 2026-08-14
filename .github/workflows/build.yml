@@ -3,139 +3,44 @@ name: Build APK
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+      
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
+      
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.19.6'
           channel: 'stable'
-
-      # ✅ PATCH: Fix SDK constraint di pubspec.yaml
-      - name: Fix pubspec.yaml
+      
+      - name: Fix all build issues
         run: |
-          if [ -f "pubspec.yaml" ]; then
-            sed -i 's/sdk: ">=3.8.1 <4.0.0"/sdk: ">=3.0.0 <4.0.0"/' pubspec.yaml
-            echo "✅ Pubspec.yaml fixed"
-          else
-            echo "⚠️ pubspec.yaml not found"
-          fi
-
-      # ✅ PATCH: Fix build.gradle.kts
-      - name: Fix build.gradle.kts
-        run: |
-          if [ -f "android/build.gradle.kts" ]; then
-            cat > android/build.gradle.kts << 'EOF'
-          buildscript {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-              dependencies {
-                  classpath("com.android.tools.build:gradle:8.1.0")
-                  classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0")
-                  classpath("com.google.gms:google-services:4.3.15")
-              }
-          }
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
-          rootProject.layout.buildDirectory.value(newBuildDir)
-          subprojects {
-              val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
-              project.layout.buildDirectory.value(newSubprojectBuildDir)
-          }
-          subprojects {
-              project.evaluationDependsOn(":app")
-          }
-          tasks.register<Delete>("clean") {
-              delete(rootProject.layout.buildDirectory)
-          }
-          EOF
-            echo "✅ build.gradle.kts fixed"
-          else
-            echo "⚠️ android/build.gradle.kts not found"
-          fi
-
-      # ✅ PATCH: Fix gradle.properties
-      - name: Fix gradle.properties
-        run: |
-          if [ -f "android/gradle.properties" ]; then
-            echo "kotlin.version=1.9.0" >> android/gradle.properties
-            echo "org.gradle.jvmargs=-Xmx4g" >> android/gradle.properties
-            echo "✅ gradle.properties fixed"
-          else
-            echo "⚠️ android/gradle.properties not found, creating new file"
-            cat > android/gradle.properties << 'EOF'
-          kotlin.version=1.9.0
-          org.gradle.jvmargs=-Xmx4g
-          org.gradle.parallel=true
-          android.useAndroidX=true
-          android.enableJetifier=true
-          EOF
-            echo "✅ gradle.properties created"
-          fi
-
-      # ✅ PATCH: Fix gradle-wrapper.properties (dengan pengecekan lokasi)
-      - name: Fix gradle-wrapper.properties
-        run: |
-          # Cek di berbagai lokasi yang mungkin
+          # Fix pubspec.yaml
+          sed -i 's/sdk: ">=3.8.1 <4.0.0"/sdk: ">=3.0.0 <4.0.0"/' pubspec.yaml
+          
+          # Fix gradle-wrapper.properties (cek lokasi yang benar)
           if [ -f "android/gradle/wrapper/gradle-wrapper.properties" ]; then
             sed -i 's/gradle-8.12-all.zip/gradle-8.3-all.zip/' android/gradle/wrapper/gradle-wrapper.properties
-            echo "✅ gradle-wrapper.properties fixed at android/gradle/wrapper/"
           elif [ -f "android/gradle-wrapper.properties" ]; then
             sed -i 's/gradle-8.12-all.zip/gradle-8.3-all.zip/' android/gradle-wrapper.properties
-            echo "✅ gradle-wrapper.properties fixed at android/"
-          else
-            echo "⚠️ gradle-wrapper.properties not found, creating default"
-            mkdir -p android/gradle/wrapper
-            cat > android/gradle/wrapper/gradle-wrapper.properties << 'EOF'
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.3-all.zip
-          EOF
-            echo "✅ gradle-wrapper.properties created"
           fi
-
-      # ✅ PATCH: Fix app/build.gradle
-      - name: Fix app/build.gradle
-        run: |
-          if [ -f "android/app/build.gradle" ]; then
-            sed -i 's/id("kotlin-android")/id("kotlin-android") version "1.9.0"/' android/app/build.gradle
-            sed -i 's/compileSdk = 36/compileSdk = 34/' android/app/build.gradle
-            sed -i 's/targetSdk = 36/targetSdk = 34/' android/app/build.gradle
-            echo "✅ app/build.gradle fixed"
-          else
-            echo "⚠️ android/app/build.gradle not found"
-          fi
-
-      - name: Install dependencies
+      
+      - name: Get dependencies
         run: flutter pub get
-
+      
       - name: Build APK
         run: flutter build apk --release
-
+      
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
