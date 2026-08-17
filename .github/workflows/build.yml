@@ -1,48 +1,77 @@
-name: Build APK
+name: Flutter Android Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # Manual trigger
 
 jobs:
-  build:
+  build-android:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-      
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.19.6'
-          channel: 'stable'
-      
-      - name: Fix all build issues
-        run: |
-          # Fix pubspec.yaml
-          sed -i 's/sdk: ">=3.8.1 <4.0.0"/sdk: ">=3.0.0 <4.0.0"/' pubspec.yaml
-          
-          # Fix gradle-wrapper.properties (cek lokasi yang benar)
-          if [ -f "android/gradle/wrapper/gradle-wrapper.properties" ]; then
-            sed -i 's/gradle-8.12-all.zip/gradle-8.3-all.zip/' android/gradle/wrapper/gradle-wrapper.properties
-          elif [ -f "android/gradle-wrapper.properties" ]; then
-            sed -i 's/gradle-8.12-all.zip/gradle-8.3-all.zip/' android/gradle-wrapper.properties
-          fi
-      
-      - name: Get dependencies
-        run: flutter pub get
-      
-      - name: Build APK
-        run: flutter build apk --release
-      
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+    
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        cmdline-tools-version: 'latest'
+    
+    - name: Accept Android SDK Licenses
+      run: yes | sdkmanager --licenses || true
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.27.4'
+        channel: 'stable'
+        cache: true
+    
+    - name: Install Flutter dependencies
+      run: |
+        flutter clean
+        flutter pub get
+    
+    - name: Generate Firebase Options (if needed)
+      run: |
+        if [ -f "lib/firebase_options.dart" ]; then
+          echo "Firebase options already exist"
+        else
+          echo "Firebase options not found - skipping"
+        fi
+    
+    - name: Build Android APK
+      run: |
+        flutter build apk \
+          --release \
+          --split-per-abi \
+          --verbose
+    
+    - name: Build Android App Bundle
+      run: |
+        flutter build appbundle \
+          --release \
+          --verbose
+    
+    - name: Upload APK artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apks
+        path: build/app/outputs/flutter-apk/*.apk
+        retention-days: 7
+    
+    - name: Upload App Bundle artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-appbundle
+        path: build/app/outputs/bundle/release/*.aab
+        retention-days: 7
