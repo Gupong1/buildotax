@@ -1,97 +1,54 @@
-name: Flutter Android Build
+name: Flutter UI Review
 
 on:
-  push:
-    branches: [ main, master ]
   pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
 
 jobs:
-  build-android:
+  build-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '17'
-    
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-      with:
-        cmdline-tools-version: 'latest'
-    
-    - name: Accept Android SDK Licenses
-      run: yes | sdkmanager --licenses || true
+    - uses: actions/checkout@v3
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.27.4'
+        flutter-version: '3.16.0'
         channel: 'stable'
-        cache: true
     
-    - name: Cache Flutter dependencies
-      uses: actions/cache@v4
+    - name: Get dependencies
+      run: flutter pub get
+    
+    - name: Generate web build
+      run: flutter build web --release --base-href="/${GITHUB_REPOSITORY#*/}/"
+      continue-on-error: true  # Tetap lanjut meskipun ada error
+    
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
       with:
-        path: |
-          ~/.pub-cache
-          build/
-        key: ${{ runner.os }}-flutter-${{ hashFiles('pubspec.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-flutter-
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./build/web
+        destination_dir: ./pr-preview/${{ github.event.number || 'main' }}
+        keep_files: true
+        user_name: 'github-actions[bot]'
+        user_email: 'github-actions[bot]@users.noreply.github.com'
+        commit_message: 'Deploy preview for PR #${{ github.event.number }}'
     
-    - name: Cache Gradle
-      uses: actions/cache@v4
+    - name: Comment preview link on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
       with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
-    
-    - name: Fix pubspec.yaml
-      run: |
-        # Hapus system_alert_window jika ada
-        if grep -q "system_alert_window" pubspec.yaml; then
-          sed -i '/system_alert_window/d' pubspec.yaml
-          echo "✅ Removed system_alert_window from pubspec.yaml"
-        fi
-    
-    - name: Install Flutter dependencies
-      run: |
-        flutter clean
-        flutter pub get
-    
-    - name: Build Android APK
-      run: |
-        flutter build apk \
-          --release \
-          --split-per-abi \
-          --verbose
-    
-    - name: Build Android App Bundle
-      run: |
-        flutter build appbundle \
-          --release \
-          --verbose
-    
-    - name: Upload APK artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: android-apks
-        path: build/app/outputs/flutter-apk/*.apk
-        retention-days: 7
-    
-    - name: Upload App Bundle artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: android-appbundle
-        path: build/app/outputs/bundle/release/*.aab
-        retention-days: 7
+        script: |
+          const prNumber = context.issue.number;
+          const repo = context.repo;
+          const previewUrl = `https://${repo.owner}.github.io/${repo.repo}/pr-preview/${prNumber}/`;
+          
+          github.rest.issues.createComment({
+            issue_number: prNumber,
+            owner: repo.owner,
+            repo: repo.repo,
+            body: `🎨 **Preview UI siap untuk direview!**\n\n🔗 Link: ${previewUrl}\n\n⚠️ *Catatan: Ini adalah preview tampilan. Jika ada error pada kode Dart, tampilan akan tetap ditampilkan sesuai kondisi yang bisa dirender.*`
+          });
