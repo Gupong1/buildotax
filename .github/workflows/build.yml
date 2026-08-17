@@ -5,7 +5,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch: # Manual trigger
+  workflow_dispatch:
 
 jobs:
   build-android:
@@ -36,18 +36,38 @@ jobs:
         channel: 'stable'
         cache: true
     
+    - name: Cache Flutter dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pub-cache
+          build/
+        key: ${{ runner.os }}-flutter-${{ hashFiles('pubspec.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-flutter-
+    
+    - name: Cache Gradle
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+    
+    - name: Fix pubspec.yaml
+      run: |
+        # Hapus system_alert_window jika ada
+        if grep -q "system_alert_window" pubspec.yaml; then
+          sed -i '/system_alert_window/d' pubspec.yaml
+          echo "✅ Removed system_alert_window from pubspec.yaml"
+        fi
+    
     - name: Install Flutter dependencies
       run: |
         flutter clean
         flutter pub get
-    
-    - name: Generate Firebase Options (if needed)
-      run: |
-        if [ -f "lib/firebase_options.dart" ]; then
-          echo "Firebase options already exist"
-        else
-          echo "Firebase options not found - skipping"
-        fi
     
     - name: Build Android APK
       run: |
